@@ -445,6 +445,14 @@ export const replaceInputsWithConfig = (flowNodeData: INodeData, overrideConfig:
 
     const getParamValues = (paramsObj: ICommonObject) => {
         for (const config in overrideConfig) {
+            // If overrideConfig[key] is object
+            if (overrideConfig[config] && typeof overrideConfig[config] === 'object') {
+                const nodeIds = Object.keys(overrideConfig[config])
+                if (!nodeIds.includes(flowNodeData.id)) continue
+                else paramsObj[config] = overrideConfig[config][flowNodeData.id]
+                continue
+            }
+
             let paramValue = overrideConfig[config] ?? paramsObj[config]
             // Check if boolean
             if (paramValue === 'true') paramValue = true
@@ -695,6 +703,7 @@ export const findAvailableConfigs = (reactFlowNodes: IReactFlowNode[], component
             if (inputParam.type === 'file') {
                 obj = {
                     node: flowNode.data.label,
+                    nodeId: flowNode.data.id,
                     label: inputParam.label,
                     name: 'files',
                     type: inputParam.fileType ?? inputParam.type
@@ -702,6 +711,7 @@ export const findAvailableConfigs = (reactFlowNodes: IReactFlowNode[], component
             } else if (inputParam.type === 'options') {
                 obj = {
                     node: flowNode.data.label,
+                    nodeId: flowNode.data.id,
                     label: inputParam.label,
                     name: inputParam.name,
                     type: inputParam.options
@@ -720,6 +730,7 @@ export const findAvailableConfigs = (reactFlowNodes: IReactFlowNode[], component
                         for (const input of inputs) {
                             obj = {
                                 node: flowNode.data.label,
+                                nodeId: flowNode.data.id,
                                 label: input.label,
                                 name: input.name,
                                 type: input.type === 'password' ? 'string' : input.type
@@ -732,6 +743,7 @@ export const findAvailableConfigs = (reactFlowNodes: IReactFlowNode[], component
             } else {
                 obj = {
                     node: flowNode.data.label,
+                    nodeId: flowNode.data.id,
                     label: inputParam.label,
                     name: inputParam.name,
                     type: inputParam.type === 'password' ? 'string' : inputParam.type
@@ -775,7 +787,7 @@ export const isFlowValidForStream = (reactFlowNodes: IReactFlowNode[], endingNod
         isValidChainOrAgent = !blacklistChains.includes(endingNodeData.name)
     } else if (endingNodeData.category === 'Agents') {
         // Agent that are available to stream
-        const whitelistAgents = ['openAIFunctionAgent', 'csvAgent', 'airtableAgent']
+        const whitelistAgents = ['openAIFunctionAgent', 'csvAgent', 'airtableAgent', 'conversationalRetrievalAgent']
         isValidChainOrAgent = whitelistAgents.includes(endingNodeData.name)
     }
 
@@ -895,4 +907,16 @@ export const redactCredentialWithPasswordType = (
         }
     }
     return plainDataObj
+}
+
+/**
+ * Replace sessionId with new chatId
+ * Ex: after clear chat history, use the new chatId as sessionId
+ * @param {any} instance
+ * @param {string} chatId
+ */
+export const checkMemorySessionId = (instance: any, chatId: string) => {
+    if (instance.memory && instance.memory.isSessionIdUsingChatMessageId && chatId) {
+        instance.memory.sessionId = chatId
+    }
 }
